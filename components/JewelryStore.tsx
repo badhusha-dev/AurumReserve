@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { JewelryItem, GoldRate, CurrencyCode } from '../types';
-import { ShoppingCart, Star, Sparkles, Scale, Info, CheckCircle2 } from 'lucide-react';
+import { JewelryItem, GoldRate, CurrencyCode, CalculationConstants } from '../types';
+import { ShoppingCart, Star, Sparkles, Scale, Info, CheckCircle2, Bookmark, ShieldCheck, Wallet, DollarSign } from 'lucide-react';
 import { CURRENCY_SYMBOLS, EXCHANGE_RATES } from '../constants';
 
 interface Props {
@@ -10,10 +10,13 @@ interface Props {
   userGrams: number;
   currency: CurrencyCode;
   onPurchase: (item: JewelryItem, goldUsed: number, cashPaid: number) => void;
+  onReserve: (item: JewelryItem, type: 'CASH_ADVANCE' | 'GOLD_LOCK', collateralValue: number) => void;
 }
 
-const JewelryStore: React.FC<Props> = ({ inventory, currentRate, userGrams, currency, onPurchase }) => {
+const JewelryStore: React.FC<Props> = ({ inventory, currentRate, userGrams, currency, onPurchase, onReserve }) => {
   const [selectedItem, setSelectedItem] = useState<JewelryItem | null>(null);
+  const [showReserveModal, setShowReserveModal] = useState(false);
+  const [reserveCollateral, setReserveCollateral] = useState<'CASH_ADVANCE' | 'GOLD_LOCK'>('CASH_ADVANCE');
 
   const calculatePrice = (item: JewelryItem) => {
     const purityMultiplier = item.purity === 24 ? 1 : item.purity === 22 ? 0.916 : 0.75;
@@ -26,6 +29,21 @@ const JewelryStore: React.FC<Props> = ({ inventory, currentRate, userGrams, curr
   const formatPrice = (val: number) => {
     const converted = val * EXCHANGE_RATES[currency];
     return `${CURRENCY_SYMBOLS[currency]}${converted.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  };
+
+  const handleReserveClick = (item: JewelryItem) => {
+    setSelectedItem(item);
+    setShowReserveModal(true);
+  };
+
+  const handleConfirmReservation = () => {
+    if (!selectedItem) return;
+    const collateralValue = reserveCollateral === 'CASH_ADVANCE' 
+      ? CalculationConstants.BOOKING_CASH_ADVANCE 
+      : 1.5; // Lock 1.5g as collateral
+    onReserve(selectedItem, reserveCollateral, collateralValue);
+    setShowReserveModal(false);
+    setSelectedItem(null);
   };
 
   return (
@@ -67,33 +85,28 @@ const JewelryStore: React.FC<Props> = ({ inventory, currentRate, userGrams, curr
                 </div>
                 <p className="text-2xl font-black text-white mb-4">{formatPrice(price)}</p>
                 
-                <div className="bg-white/5 rounded-2xl p-4 mb-6">
-                  <p className="text-[10px] text-slate-400 font-bold uppercase mb-2">Buy with Savings</p>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-sm font-bold text-emerald-400">-{formatPrice(Math.min(price, goldValueCredit))}</p>
-                      <p className="text-[9px] text-slate-500">Gold Applied</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-white">{formatPrice(remainingCash)}</p>
-                      <p className="text-[9px] text-slate-500">Cash Due</p>
-                    </div>
-                  </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button 
+                    onClick={() => setSelectedItem(item)}
+                    className="bg-white text-black font-black py-4 rounded-2xl hover:bg-yellow-500 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <ShoppingCart className="w-4 h-4" /> Buy
+                  </button>
+                  <button 
+                    onClick={() => handleReserveClick(item)}
+                    className="bg-[#222] text-white border border-white/10 font-black py-4 rounded-2xl hover:bg-white/5 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Bookmark className="w-4 h-4 text-yellow-500" /> Reserve
+                  </button>
                 </div>
-
-                <button 
-                  onClick={() => setSelectedItem(item)}
-                  className="w-full bg-white text-black font-black py-4 rounded-2xl hover:bg-yellow-500 transition-colors flex items-center justify-center gap-2"
-                >
-                  <ShoppingCart className="w-5 h-5" /> Buy Now
-                </button>
               </div>
             </div>
           );
         })}
       </div>
 
-      {selectedItem && (
+      {/* Buy Modal */}
+      {selectedItem && !showReserveModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in zoom-in duration-300">
           <div className="bg-[#1a1a1a] w-full max-w-lg rounded-[2.5rem] border border-white/10 p-8 shadow-2xl relative">
             <button onClick={() => setSelectedItem(null)} className="absolute top-6 right-6 text-slate-500 hover:text-white">✕</button>
@@ -127,9 +140,64 @@ const JewelryStore: React.FC<Props> = ({ inventory, currentRate, userGrams, curr
             >
               Confirm and Checkout
             </button>
-            <p className="text-[10px] text-center text-slate-500 mt-6 flex items-center justify-center gap-2">
-               <Info className="w-3 h-3" /> Secure Payment via 256-bit Encryption
-            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Reserve Modal */}
+      {selectedItem && showReserveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in zoom-in duration-300">
+          <div className="bg-[#1a1a1a] w-full max-w-lg rounded-[2.5rem] border border-white/10 p-8 shadow-2xl relative">
+            <button onClick={() => {setSelectedItem(null); setShowReserveModal(false);}} className="absolute top-6 right-6 text-slate-500 hover:text-white">✕</button>
+            <h3 className="text-2xl font-black mb-2">Reserve Design</h3>
+            <p className="text-slate-400 mb-8">Lock price for 4 days. Visit store to complete purchase.</p>
+
+            <div className="space-y-4 mb-8">
+              <label className="text-xs font-bold text-slate-500 uppercase">Choose Collateral</label>
+              
+              <div 
+                onClick={() => setReserveCollateral('CASH_ADVANCE')}
+                className={`p-5 rounded-3xl border-2 transition-all cursor-pointer ${reserveCollateral === 'CASH_ADVANCE' ? 'border-yellow-500 bg-yellow-500/5' : 'border-white/5 bg-white/5'}`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <DollarSign className={`w-5 h-5 ${reserveCollateral === 'CASH_ADVANCE' ? 'text-yellow-500' : 'text-slate-500'}`} />
+                    <span className="font-bold text-white">Cash Advance</span>
+                  </div>
+                  <div className={`w-4 h-4 rounded-full border-2 ${reserveCollateral === 'CASH_ADVANCE' ? 'border-yellow-500 bg-yellow-500' : 'border-slate-700'}`} />
+                </div>
+                <p className="text-xs text-slate-400">Pay ${CalculationConstants.BOOKING_CASH_ADVANCE} advance now. Refundable on purchase.</p>
+              </div>
+
+              <div 
+                onClick={() => setReserveCollateral('GOLD_LOCK')}
+                className={`p-5 rounded-3xl border-2 transition-all cursor-pointer ${reserveCollateral === 'GOLD_LOCK' ? 'border-yellow-500 bg-yellow-500/5' : 'border-white/5 bg-white/5'}`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <Wallet className={`w-5 h-5 ${reserveCollateral === 'GOLD_LOCK' ? 'text-yellow-500' : 'text-slate-500'}`} />
+                    <span className="font-bold text-white">Lock Gold Balance</span>
+                  </div>
+                  <div className={`w-4 h-4 rounded-full border-2 ${reserveCollateral === 'GOLD_LOCK' ? 'border-yellow-500 bg-yellow-500' : 'border-slate-700'}`} />
+                </div>
+                <p className="text-xs text-slate-400">Lock 1.5g from your current savings as security collateral.</p>
+              </div>
+            </div>
+
+            <div className="bg-white/5 p-4 rounded-2xl border border-white/5 flex items-start gap-3 mb-8">
+              <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-slate-400 leading-relaxed">
+                By reserving, you lock the 24K Gold Rate at <span className="text-white font-bold">{formatPrice(currentRate.price24k)}/g</span>. This rate is guaranteed for 96 hours.
+              </p>
+            </div>
+
+            <button 
+              onClick={handleConfirmReservation}
+              disabled={reserveCollateral === 'GOLD_LOCK' && userGrams < 1.5}
+              className="w-full bg-yellow-500 disabled:bg-slate-700 text-black font-black py-5 rounded-3xl text-lg shadow-xl shadow-yellow-500/20 hover:scale-[1.02] active:scale-95 transition-all"
+            >
+              {reserveCollateral === 'GOLD_LOCK' && userGrams < 1.5 ? 'Insufficient Gold' : 'Reserve for 96 Hours'}
+            </button>
           </div>
         </div>
       )}
