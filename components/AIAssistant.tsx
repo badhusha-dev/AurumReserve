@@ -2,28 +2,31 @@
 import React, { useState, useEffect } from 'react';
 import { getGoldInsights } from '../services/geminiService';
 import { Sparkles, Loader2, RefreshCw } from 'lucide-react';
-import { UserStats } from '../types';
+import { UserStats, CurrencyCode } from '../types';
 
 interface Props {
   userStats: UserStats;
   currentRate: number;
+  currency: CurrencyCode;
 }
 
-const AIAssistant: React.FC<Props> = ({ userStats, currentRate }) => {
+const AIAssistant: React.FC<Props> = ({ userStats, currentRate, currency }) => {
   const [insight, setInsight] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
 
   const fetchInsight = async () => {
     setLoading(true);
-    const result = await getGoldInsights(userStats, currentRate);
+    // Correctly pass the currency to the insight service
+    const result = await getGoldInsights(userStats, currentRate, currency);
     setInsight(result);
     setLoading(false);
   };
 
   useEffect(() => {
     fetchInsight();
+    // Re-fetch when currency changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [currency]);
 
   return (
     <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-2xl p-6 text-white shadow-xl">

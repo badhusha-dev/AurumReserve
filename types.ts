@@ -1,18 +1,54 @@
 
+export type CurrencyCode = 'INR' | 'USD' | 'AED';
+export type UserRole = 'CUSTOMER' | 'ADMIN';
+export type Purity = 18 | 22 | 24;
+
+export interface User {
+  id: string;
+  name: string;
+  phone?: string;
+  email: string;
+  role: UserRole;
+  goldBalance: number;
+}
+
 export interface GoldRate {
   price24k: number;
   price22k: number;
   timestamp: string;
 }
 
+export interface JewelryItem {
+  id: string;
+  sku: string;
+  name: string;
+  category: 'RING' | 'NECKLACE' | 'COIN' | 'BRACELET';
+  weight: number; 
+  purity: Purity;
+  makingCharges: number; 
+  image: string;
+  stock: number;
+  isVisible: boolean;
+}
+
+export interface GiftMetadata {
+  recipientName: string;
+  message: string;
+  theme: 'BIRTHDAY' | 'WEDDING' | 'FESTIVAL' | 'GENERAL';
+}
+
 export interface Transaction {
   id: string;
   date: string;
-  amount: number;
+  amount: number; 
   grams: number;
-  type: 'BUY' | 'BONUS' | 'REDEEM';
+  type: 'BUY' | 'BONUS' | 'REDEEM' | 'GIFT_SENT' | 'GIFT_RECEIVED' | 'JEWELRY_PURCHASE';
   status: 'COMPLETED' | 'PENDING';
   rate: number;
+  currencyAtRuntime: CurrencyCode;
+  exchangeRateAtRuntime: number;
+  giftMetadata?: GiftMetadata;
+  details?: string;
 }
 
 export interface UserStats {
@@ -21,6 +57,8 @@ export interface UserStats {
   currentValue: number;
   unrealizedGain: number;
   gainPercentage: number;
+  loyaltyTier: 'SILVER' | 'GOLD' | 'PLATINUM';
+  currentStreak: number;
 }
 
 export interface SchemeInfo {

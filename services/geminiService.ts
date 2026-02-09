@@ -1,21 +1,26 @@
 
 import { GoogleGenAI } from "@google/genai";
+import { CurrencyCode } from "../types";
+import { EXCHANGE_RATES, CURRENCY_SYMBOLS } from "../constants";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+// Initializing the Google GenAI SDK with the API key from process.env.API_KEY
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-export const getGoldInsights = async (userStats: any, currentRate: number) => {
+export const getGoldInsights = async (userStats: any, currentRate: number, currency: CurrencyCode = 'INR') => {
+  const convertedRate = currentRate * EXCHANGE_RATES[currency];
+  const symbol = CURRENCY_SYMBOLS[currency];
+  
   const prompt = `
-    As a senior FinTech wealth advisor, provide a 3-sentence analysis of the following gold investment portfolio:
-    Total Invested: ₹${userStats.totalInvested}
-    Accumulated Gold: ${userStats.totalGrams} grams
-    Current Gold Rate: ₹${currentRate}/gram
-    Total Portfolio Value: ₹${userStats.currentValue}
-    Net Gain/Loss: ₹${userStats.unrealizedGain} (${userStats.gainPercentage}%)
+    As a senior Global FinTech wealth advisor, provide a sharp 3-sentence analysis of this gold portfolio:
+    User Stats: Total Gold: ${userStats.totalGrams}g, Net Gain: ${userStats.gainPercentage}%
+    Current Market: ${symbol}${convertedRate.toLocaleString()}/gram (Local Currency: ${currency})
+    Loyalty Tier: ${userStats.loyaltyTier}
     
-    Mention the impact of current market volatility and suggest whether this is a good time to continue the 11-month savings scheme. Keep it professional and encouraging.
+    Mention why gold is a strong hedge in ${currency} today. Advise on gifting as a diversification strategy. Keep it premium and intelligent.
   `;
 
   try {
+    // Using gemini-3-flash-preview for basic text tasks
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
@@ -24,27 +29,10 @@ export const getGoldInsights = async (userStats: any, currentRate: number) => {
         topP: 0.9,
       }
     });
+    // The text output is obtained directly via the text property
     return response.text || "Unable to generate insights at this time.";
   } catch (error) {
     console.error("Gemini Error:", error);
-    return "The Aurum Advisor is currently offline. Please try again later.";
-  }
-};
-
-export const getSchemeComparison = async (investmentAmount: number) => {
-  const prompt = `
-    Compare a standard Recurring Deposit (6% interest) vs an 11-month Gold Savings Scheme where the 12th installment is free (paid by jeweler). 
-    Assume gold price grows at 10% annually. Monthly investment: ₹${investmentAmount}.
-    Give a quick bullet-point summary of the benefits.
-  `;
-
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: prompt,
-    });
-    return response.text;
-  } catch (error) {
-    return "Error comparing schemes.";
+    return "The global market advisor is currently offline. Reviewing historical data...";
   }
 };
