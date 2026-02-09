@@ -8,7 +8,7 @@ import {
   LogOut,
   Clock
 } from 'lucide-react';
-import { INITIAL_GOLD_RATE, MOCK_TRANSACTIONS, EXCHANGE_RATES, MOCK_JEWELRY } from './constants';
+import { INITIAL_GOLD_RATE, MOCK_TRANSACTIONS, EXCHANGE_RATES, MOCK_JEWELRY, MOCK_USERS } from './constants';
 import { GoldRate, Transaction, UserStats, CalculationConstants, CurrencyCode, User, JewelryItem, Booking, AuditLog } from './types';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
@@ -26,6 +26,8 @@ import ActiveBookings from './components/ActiveBookings';
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentRate, setCurrentRate] = useState<GoldRate>(INITIAL_GOLD_RATE);
+  const [globalRate, setGlobalRate] = useState<number>(INITIAL_GOLD_RATE.price24k);
+  const [useOverrideRate, setUseOverrideRate] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'history' | 'calculator' | 'gift' | 'store' | 'admin' | 'bookings'>('dashboard');
   const [currency, setCurrency] = useState<CurrencyCode>('INR');
@@ -39,33 +41,40 @@ const App: React.FC = () => {
     const savedUser = localStorage.getItem('aurum_user');
     const savedBookings = localStorage.getItem('aurum_bookings');
     const savedLogs = localStorage.getItem('aurum_logs');
-    if (savedUser) {
-      setCurrentUser(JSON.parse(savedUser));
-    }
-    if (savedBookings) {
-      setBookings(JSON.parse(savedBookings));
-    }
-    if (savedLogs) {
-      setAuditLogs(JSON.parse(savedLogs));
-    }
+    const savedInventory = localStorage.getItem('aurum_inventory');
+    
+    if (savedUser) setCurrentUser(JSON.parse(savedUser));
+    if (savedBookings) setBookings(JSON.parse(savedBookings));
+    if (savedLogs) setAuditLogs(JSON.parse(savedLogs));
+    if (savedInventory) setInventory(JSON.parse(savedInventory));
+    
     setIsAuthLoading(false);
   }, []);
 
   useEffect(() => {
     localStorage.setItem('aurum_bookings', JSON.stringify(bookings));
     localStorage.setItem('aurum_logs', JSON.stringify(auditLogs));
-  }, [bookings, auditLogs]);
+    localStorage.setItem('aurum_inventory', JSON.stringify(inventory));
+  }, [bookings, auditLogs, inventory]);
 
+  // Market Engine Simulation
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentRate(prev => ({
-        ...prev,
-        price24k: prev.price24k + (Math.random() - 0.5) * 10,
-        price22k: (prev.price24k + (Math.random() - 0.5) * 10) * 0.916,
-        timestamp: new Date().toISOString()
-      }));
+      setGlobalRate(prev => prev + (Math.random() - 0.5) * 15);
+      
+      if (!useOverrideRate) {
+        setCurrentRate(prev => {
+          const new24k = globalRate;
+          return {
+            ...prev,
+            price24k: new24k,
+            price22k: new24k * 0.916,
+            timestamp: new Date().toISOString()
+          };
+        });
+      }
 
-      // Simulate Auto-Restocking for expired bookings
+      // Auto-Restocking for expired bookings
       setBookings(prev => {
         const now = new Date();
         let changed = false;
@@ -77,7 +86,6 @@ const App: React.FC = () => {
           return b;
         });
         if (changed) {
-          // Increment stock back
           setInventory(inv => inv.map(item => {
             const expiredItemsCount = prev.filter(b => b.status === 'ACTIVE' && new Date(b.expiresAt) < now && b.itemId === item.id).length;
             if (expiredItemsCount > 0) {
@@ -90,7 +98,7 @@ const App: React.FC = () => {
       });
     }, 10000);
     return () => clearInterval(interval);
-  }, [inventory]);
+  }, [inventory, useOverrideRate, globalRate]);
 
   const addAuditLog = (action: string, details: string) => {
     const newLog: AuditLog = {
@@ -100,7 +108,7 @@ const App: React.FC = () => {
       timestamp: new Date().toISOString(),
       details
     };
-    setAuditLogs(prev => [newLog, ...prev]);
+    setAuditLogs(prev => [newLog, ...prev].slice(0, 100));
   };
 
   const handleLogin = (user: User) => {
@@ -114,6 +122,19 @@ const App: React.FC = () => {
     localStorage.removeItem('aurum_user');
     setActiveTab('dashboard');
   };
+
+  const adminStats = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const todayTxs = transactions.filter(t => t.date === today);
+    const revenueToday = todayTxs.reduce((acc, t) => acc + (t.type === 'BUY' || t.type === 'JEWELRY_PURCHASE' ? t.amount : 0), 0);
+    const goldAccumulatedToday = todayTxs.reduce((acc, t) => acc + (t.type === 'BUY' ? t.grams : 0), 0);
+    const activeReservations = bookings.filter(b => b.status === 'ACTIVE').length;
+    
+    // Total liability: Sum of all user gold balances
+    const totalGoldLiability = MOCK_USERS.reduce((acc, u) => acc + u.goldBalance, 0);
+
+    return { revenueToday, goldAccumulatedToday, activeReservations, totalGoldLiability };
+  }, [transactions, bookings]);
 
   const userStats = useMemo<UserStats>(() => {
     const totalGrams = transactions.reduce((acc, t) => {
@@ -178,7 +199,6 @@ const App: React.FC = () => {
     };
 
     setTransactions(prev => [newTx, ...prev]);
-    // Deduct stock
     setInventory(prev => prev.map(i => i.id === item.id ? { ...i, stock: i.stock - 1 } : i));
     setActiveTab('history');
   };
@@ -244,12 +264,17 @@ const App: React.FC = () => {
           <AdminPanel 
             currentRate={currentRate} 
             setCurrentRate={setCurrentRate} 
+            globalRate={globalRate}
+            useOverrideRate={useOverrideRate}
+            setUseOverrideRate={setUseOverrideRate}
             inventory={inventory} 
             setInventory={setInventory}
             bookings={bookings}
             setBookings={setBookings}
             auditLogs={auditLogs}
             addAuditLog={addAuditLog}
+            stats={adminStats}
+            onLogout={handleLogout}
           />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -309,35 +334,30 @@ const App: React.FC = () => {
         )}
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-[#161616] border-t border-white/5 px-6 py-3 flex justify-around items-center z-50">
-        <button onClick={() => setActiveTab('dashboard')} className={`flex flex-col items-center gap-1 ${activeTab === 'dashboard' ? 'text-yellow-500' : 'text-slate-500'}`}>
-          <LayoutDashboard className="w-6 h-6" />
-          <span className="text-[10px] font-medium">Home</span>
-        </button>
-        <button onClick={() => setActiveTab('store')} className={`flex flex-col items-center gap-1 ${activeTab === 'store' ? 'text-yellow-500' : 'text-slate-500'}`}>
-          <ShoppingBag className="w-6 h-6" />
-          <span className="text-[10px] font-medium">Atelier</span>
-        </button>
-        <button onClick={() => setActiveTab('bookings')} className={`flex flex-col items-center gap-1 ${activeTab === 'bookings' ? 'text-yellow-500' : 'text-slate-500'}`}>
-          <Clock className="w-6 h-6" />
-          <span className="text-[10px] font-medium">Holds</span>
-        </button>
-        <button onClick={() => setActiveTab('calculator')} className={`flex flex-col items-center gap-1 ${activeTab === 'calculator' ? 'text-yellow-500' : 'text-slate-500'}`}>
-          <Calculator className="w-6 h-6" />
-          <span className="text-[10px] font-medium">Invest</span>
-        </button>
-        {currentUser.role === 'ADMIN' ? (
-          <button onClick={() => setActiveTab('admin')} className={`flex flex-col items-center gap-1 ${activeTab === 'admin' ? 'text-yellow-500' : 'text-slate-500'}`}>
-            <History className="w-6 h-6" />
-            <span className="text-[10px] font-medium">Audit</span>
+      {currentUser.role !== 'ADMIN' && (
+        <nav className="fixed bottom-0 left-0 right-0 bg-[#161616] border-t border-white/5 px-6 py-3 flex justify-around items-center z-50">
+          <button onClick={() => setActiveTab('dashboard')} className={`flex flex-col items-center gap-1 ${activeTab === 'dashboard' ? 'text-yellow-500' : 'text-slate-500'}`}>
+            <LayoutDashboard className="w-6 h-6" />
+            <span className="text-[10px] font-medium">Home</span>
           </button>
-        ) : (
+          <button onClick={() => setActiveTab('store')} className={`flex flex-col items-center gap-1 ${activeTab === 'store' ? 'text-yellow-500' : 'text-slate-500'}`}>
+            <ShoppingBag className="w-6 h-6" />
+            <span className="text-[10px] font-medium">Atelier</span>
+          </button>
+          <button onClick={() => setActiveTab('bookings')} className={`flex flex-col items-center gap-1 ${activeTab === 'bookings' ? 'text-yellow-500' : 'text-slate-500'}`}>
+            <Clock className="w-6 h-6" />
+            <span className="text-[10px] font-medium">Holds</span>
+          </button>
+          <button onClick={() => setActiveTab('calculator')} className={`flex flex-col items-center gap-1 ${activeTab === 'calculator' ? 'text-yellow-500' : 'text-slate-500'}`}>
+            <Calculator className="w-6 h-6" />
+            <span className="text-[10px] font-medium">Invest</span>
+          </button>
           <button onClick={() => setActiveTab('history')} className={`flex flex-col items-center gap-1 ${activeTab === 'history' ? 'text-yellow-500' : 'text-slate-500'}`}>
             <History className="w-6 h-6" />
             <span className="text-[10px] font-medium">History</span>
           </button>
-        )}
-      </nav>
+        </nav>
+      )}
     </div>
   );
 };
