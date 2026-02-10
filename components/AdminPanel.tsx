@@ -9,7 +9,7 @@ import {
   ShieldCheck, ArrowDownLeft, DollarSign, Image as ImageIcon, CheckCircle2,
   Calendar, Layers, Percent, MapPin, Calculator, Info, Loader2, SearchIcon,
   Scale, Upload, Scissors, AlertCircle, Radio, ChevronDown, BookmarkCheck,
-  Banknote
+  Banknote, CalendarClock
 } from 'lucide-react';
 
 interface Props {
@@ -81,7 +81,8 @@ const AdminPanel: React.FC<Props> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [reservationSearch, setReservationSearch] = useState('');
   const [userSearchTerm, setUserSearchTerm] = useState('');
-  const [reservationStatusFilter, setReservationStatusFilter] = useState<'ALL' | 'ACTIVE' | 'COMPLETED' | 'EXPIRED'>('ALL');
+  // Enhanced filter state to support URGENT visit preparation
+  const [reservationStatusFilter, setReservationStatusFilter] = useState<'ALL' | 'ACTIVE' | 'COMPLETED' | 'EXPIRED' | 'URGENT'>('ALL');
   const [qrModalBookingId, setQrModalBookingId] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<JewelryItem | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -519,6 +520,28 @@ const AdminPanel: React.FC<Props> = ({
 
         {activeTab === 'RESERVATIONS' && (
           <div className="space-y-6">
+             {/* Header Section for Reservations */}
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-[#1a1a1a] p-6 rounded-[1.5rem] border border-white/5 flex items-center justify-between">
+                   <div>
+                      <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Total Reservations</p>
+                      <p className="text-2xl font-black text-white">{bookings.filter(b => b.status === 'ACTIVE').length}</p>
+                   </div>
+                   <div className="w-10 h-10 bg-yellow-500/10 rounded-xl flex items-center justify-center text-yellow-500">
+                      <BookmarkCheck className="w-6 h-6" />
+                   </div>
+                </div>
+                <div className="bg-[#1a1a1a] p-6 rounded-[1.5rem] border border-white/5 flex items-center justify-between">
+                   <div>
+                      <p className="text-[10px] text-rose-500 font-black uppercase tracking-widest mb-1">Expiring Today</p>
+                      <p className="text-2xl font-black text-rose-500">{bookings.filter(b => b.status === 'ACTIVE' && getRemainingTime(b.expiresAt).includes('h')).length}</p>
+                   </div>
+                   <div className="w-10 h-10 bg-rose-500/10 rounded-xl flex items-center justify-center text-rose-500">
+                      <CalendarClock className="w-6 h-6" />
+                   </div>
+                </div>
+             </div>
+
              <div className="flex flex-col md:flex-row gap-4 items-center bg-[#1a1a1a] p-4 rounded-[1.5rem] border border-white/5 shadow-xl">
                 <div className="flex-1 flex items-center gap-4 px-4 border-r border-white/5">
                    <UserSearch className="w-5 h-5 text-slate-500" />
@@ -529,24 +552,30 @@ const AdminPanel: React.FC<Props> = ({
                       onChange={(e) => setReservationSearch(e.target.value)}
                    />
                 </div>
-                {/* Reservation Manager Filters */}
-                <div className="flex gap-2 p-1 bg-white/5 rounded-xl">
+                {/* Enhanced Reservation Manager Filters */}
+                <div className="flex gap-2 p-1 bg-white/5 rounded-xl overflow-x-auto">
                    {[
                      { label: 'ALL', value: 'ALL' },
-                     { label: 'ON HOLD', value: 'ACTIVE' },
+                     { label: 'DUE TODAY', value: 'URGENT' }, // New preparation filter
+                     { label: 'RESERVED', value: 'ACTIVE' },
                      { label: 'COMPLETED', value: 'COMPLETED' },
                      { label: 'EXPIRED', value: 'EXPIRED' }
                    ].map(f => (
                      <button 
                         key={f.value}
                         onClick={() => setReservationStatusFilter(f.value as any)}
-                        className={`px-4 py-2 text-[10px] font-black rounded-lg transition-all flex items-center gap-2 ${reservationStatusFilter === f.value ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/20' : 'text-slate-500 hover:text-white'}`}
+                        className={`px-4 py-2 text-[10px] font-black rounded-lg transition-all flex items-center gap-2 whitespace-nowrap ${reservationStatusFilter === f.value ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/20' : 'text-slate-500 hover:text-white'}`}
                      >
-                       {f.value === 'ACTIVE' && <BookmarkCheck className="w-3.5 h-3.5" />}
+                       {f.value === 'URGENT' && <CalendarClock className="w-3.5 h-3.5" />}
                        {f.label}
                        {f.value === 'ACTIVE' && bookings.filter(b => b.status === 'ACTIVE').length > 0 && (
                          <span className={`px-1.5 py-0.5 rounded-md text-[8px] ${reservationStatusFilter === 'ACTIVE' ? 'bg-black/20' : 'bg-white/10'}`}>
                            {bookings.filter(b => b.status === 'ACTIVE').length}
+                         </span>
+                       )}
+                       {f.value === 'URGENT' && bookings.filter(b => b.status === 'ACTIVE' && getRemainingTime(b.expiresAt).includes('h')).length > 0 && (
+                         <span className="px-1.5 py-0.5 rounded-md text-[8px] bg-rose-500 text-white">
+                           {bookings.filter(b => b.status === 'ACTIVE' && getRemainingTime(b.expiresAt).includes('h')).length}
                          </span>
                        )}
                      </button>
@@ -569,7 +598,13 @@ const AdminPanel: React.FC<Props> = ({
                       <tbody className="divide-y divide-white/5">
                         {bookings.filter(b => {
                             const matchesSearch = b.userName.toLowerCase().includes(reservationSearch.toLowerCase()) || b.id.includes(reservationSearch);
-                            const matchesStatus = reservationStatusFilter === 'ALL' || b.status === reservationStatusFilter;
+                            let matchesStatus = reservationStatusFilter === 'ALL' || b.status === reservationStatusFilter;
+                            
+                            // Specific logic for 'URGENT' (Expiring Today)
+                            if (reservationStatusFilter === 'URGENT') {
+                              matchesStatus = b.status === 'ACTIVE' && getRemainingTime(b.expiresAt).includes('h');
+                            }
+                            
                             return matchesSearch && matchesStatus;
                         }).map(b => (
                           <tr key={b.id} className="hover:bg-white/[0.02] transition-colors group">
@@ -638,7 +673,7 @@ const AdminPanel: React.FC<Props> = ({
                 <div>
                    <h4 className="text-sm font-black text-white mb-1 uppercase tracking-widest">Store Visit Protocol</h4>
                    <p className="text-xs text-slate-400 leading-relaxed">
-                     Admins should filter for <strong>'ON HOLD'</strong> items daily to ensure the physical stock is polished and ready in the high-security display vault for scheduled customer visits.
+                     Admins should filter for <strong>'DUE TODAY'</strong> to identify imminent visits. These items must be polished and ready in the high-security display vault for authenticated handover.
                    </p>
                 </div>
              </div>
