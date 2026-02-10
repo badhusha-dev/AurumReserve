@@ -852,10 +852,11 @@ const AdminPanel: React.FC<Props> = ({
                   </div>
                 </div>
 
+                {/* DYNAMIC MAKING CHARGE SECTION */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">
-                      {formData.makingChargeType === 'FIXED' ? 'Artisan Labor (Fixed)' : 'Artisan Labor (Markup %)'}
+                      {formData.makingChargeType === 'FIXED' ? 'Artisan Labor (Fixed Amount)' : 'Artisan Labor (Percentage %)'}
                     </label>
                     <div className="flex bg-white/5 p-1 rounded-xl">
                       <button 
@@ -876,7 +877,7 @@ const AdminPanel: React.FC<Props> = ({
                     <input 
                       type="number" 
                       placeholder={formData.makingChargeType === 'FIXED' ? "e.g. 1500" : "e.g. 12.5"}
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-5 text-white font-bold text-xl"
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-5 text-white font-bold text-xl transition-all placeholder:text-slate-700"
                       value={formData.makingCharges || ''}
                       onChange={e => setFormData({...formData, makingCharges: parseFloat(e.target.value)})}
                     />

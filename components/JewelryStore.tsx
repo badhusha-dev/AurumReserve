@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { JewelryItem, GoldRate, CurrencyCode, CalculationConstants } from '../types';
-import { ShoppingCart, Star, Sparkles, Scale, Info, CheckCircle2, Bookmark, ShieldCheck, Wallet, DollarSign } from 'lucide-react';
+import { ShoppingCart, Star, Sparkles, Scale, Info, CheckCircle2, Bookmark, ShieldCheck, Wallet, DollarSign, Calculator } from 'lucide-react';
 import { CURRENCY_SYMBOLS, EXCHANGE_RATES } from '../constants';
 
 interface Props {
@@ -21,7 +20,13 @@ const JewelryStore: React.FC<Props> = ({ inventory, currentRate, userGrams, curr
   const calculatePrice = (item: JewelryItem) => {
     const purityMultiplier = item.purity === 24 ? 1 : item.purity === 22 ? 0.916 : 0.75;
     const baseMetalValue = currentRate.price24k * purityMultiplier * item.weight;
-    const totalBeforeTax = baseMetalValue + item.makingCharges;
+    
+    // Support both Fixed and Percentage charge types
+    const makingFee = item.makingChargeType === 'FIXED' 
+      ? item.makingCharges 
+      : (baseMetalValue * item.makingCharges) / 100;
+      
+    const totalBeforeTax = baseMetalValue + makingFee;
     const final = totalBeforeTax * 1.03; // 3% GST
     return final;
   };
