@@ -34,6 +34,7 @@ const App: React.FC = () => {
   const [inventory, setInventory] = useState<JewelryItem[]>(MOCK_JEWELRY);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [users, setUsers] = useState<User[]>(MOCK_USERS);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   // Persistence Simulation
@@ -42,11 +43,13 @@ const App: React.FC = () => {
     const savedBookings = localStorage.getItem('aurum_bookings');
     const savedLogs = localStorage.getItem('aurum_logs');
     const savedInventory = localStorage.getItem('aurum_inventory');
+    const savedUsers = localStorage.getItem('aurum_users_list');
     
     if (savedUser) setCurrentUser(JSON.parse(savedUser));
     if (savedBookings) setBookings(JSON.parse(savedBookings));
     if (savedLogs) setAuditLogs(JSON.parse(savedLogs));
     if (savedInventory) setInventory(JSON.parse(savedInventory));
+    if (savedUsers) setUsers(JSON.parse(savedUsers));
     
     setIsAuthLoading(false);
   }, []);
@@ -55,7 +58,8 @@ const App: React.FC = () => {
     localStorage.setItem('aurum_bookings', JSON.stringify(bookings));
     localStorage.setItem('aurum_logs', JSON.stringify(auditLogs));
     localStorage.setItem('aurum_inventory', JSON.stringify(inventory));
-  }, [bookings, auditLogs, inventory]);
+    localStorage.setItem('aurum_users_list', JSON.stringify(users));
+  }, [bookings, auditLogs, inventory, users]);
 
   // Market Engine Simulation
   useEffect(() => {
@@ -131,10 +135,10 @@ const App: React.FC = () => {
     const activeReservations = bookings.filter(b => b.status === 'ACTIVE').length;
     
     // Total liability: Sum of all user gold balances
-    const totalGoldLiability = MOCK_USERS.reduce((acc, u) => acc + u.goldBalance, 0);
+    const totalGoldLiability = users.reduce((acc, u) => acc + u.goldBalance, 0);
 
     return { revenueToday, goldAccumulatedToday, activeReservations, totalGoldLiability };
-  }, [transactions, bookings]);
+  }, [transactions, bookings, users]);
 
   const userStats = useMemo<UserStats>(() => {
     const totalGrams = transactions.reduce((acc, t) => {
@@ -274,6 +278,8 @@ const App: React.FC = () => {
             auditLogs={auditLogs}
             addAuditLog={addAuditLog}
             stats={adminStats}
+            users={users}
+            setUsers={setUsers}
             onLogout={handleLogout}
           />
         ) : (

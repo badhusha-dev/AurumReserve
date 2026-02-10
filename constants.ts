@@ -27,6 +27,7 @@ export const MOCK_USERS: User[] = [
     email: 'sarah@example.com',
     role: 'CUSTOMER',
     goldBalance: 5.42,
+    status: 'ACTIVE'
   },
   {
     id: 'admin1',
@@ -34,6 +35,7 @@ export const MOCK_USERS: User[] = [
     email: 'admin@aurumreserve.com',
     role: 'ADMIN',
     goldBalance: 0,
+    status: 'ACTIVE'
   }
 ];
 
@@ -46,6 +48,7 @@ export const MOCK_JEWELRY: JewelryItem[] = [
     weight: 4.5,
     purity: 22,
     makingCharges: 1500,
+    makingChargeType: 'FIXED',
     image: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&q=80&w=400',
     stock: 12,
     isVisible: true
@@ -57,7 +60,8 @@ export const MOCK_JEWELRY: JewelryItem[] = [
     category: 'NECKLACE',
     weight: 24.2,
     purity: 22,
-    makingCharges: 8500,
+    makingCharges: 12,
+    makingChargeType: 'PERCENTAGE',
     image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&q=80&w=400',
     stock: 3,
     isVisible: true
@@ -70,6 +74,7 @@ export const MOCK_JEWELRY: JewelryItem[] = [
     weight: 10.0,
     purity: 24,
     makingCharges: 500,
+    makingChargeType: 'FIXED',
     image: 'https://images.unsplash.com/photo-1610375461246-83df859d849d?auto=format&fit=crop&q=80&w=400',
     stock: 50,
     isVisible: true

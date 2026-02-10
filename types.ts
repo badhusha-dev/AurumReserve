@@ -3,6 +3,7 @@ export type CurrencyCode = 'INR' | 'USD' | 'AED';
 export type UserRole = 'CUSTOMER' | 'ADMIN';
 export type Purity = 18 | 22 | 24;
 export type CollateralType = 'CASH_ADVANCE' | 'GOLD_LOCK';
+export type MakingChargeType = 'FIXED' | 'PERCENTAGE';
 
 export interface User {
   id: string;
@@ -11,6 +12,7 @@ export interface User {
   email: string;
   role: UserRole;
   goldBalance: number;
+  status: 'ACTIVE' | 'FROZEN';
 }
 
 export interface GoldRate {
@@ -27,6 +29,7 @@ export interface JewelryItem {
   weight: number; 
   purity: Purity;
   makingCharges: number; 
+  makingChargeType: MakingChargeType;
   image: string;
   stock: number;
   isVisible: boolean;
