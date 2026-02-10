@@ -8,7 +8,8 @@ import {
   LayoutDashboard, LogOut, QrCode, UserSearch, Timer, Edit3, X, Zap, 
   ShieldCheck, ArrowDownLeft, DollarSign, Image as ImageIcon, CheckCircle2,
   Calendar, Layers, Percent, MapPin, Calculator, Info, Loader2, SearchIcon,
-  Scale, Upload, Scissors, AlertCircle, Radio, ChevronDown, BookmarkCheck
+  Scale, Upload, Scissors, AlertCircle, Radio, ChevronDown, BookmarkCheck,
+  Banknote
 } from 'lucide-react';
 
 interface Props {
@@ -854,23 +855,27 @@ const AdminPanel: React.FC<Props> = ({
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">
-                      {formData.makingChargeType === 'FIXED' ? 'Labor Charge (Fixed Amount)' : 'Labor Charge (Percentage %)'}
+                      {formData.makingChargeType === 'FIXED' ? 'Artisan Labor (Fixed)' : 'Artisan Labor (Markup %)'}
                     </label>
                     <div className="flex bg-white/5 p-1 rounded-xl">
                       <button 
                         onClick={() => setFormData({...formData, makingChargeType: 'FIXED'})}
-                        className={`px-4 py-1.5 text-[10px] font-bold rounded-lg transition-all ${formData.makingChargeType === 'FIXED' ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
-                      >Fixed (₹)</button>
+                        className={`px-4 py-2 text-[10px] font-bold rounded-lg transition-all flex items-center gap-2 ${formData.makingChargeType === 'FIXED' ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
+                      >
+                        <Banknote className="w-3 h-3" /> Fixed
+                      </button>
                       <button 
                         onClick={() => setFormData({...formData, makingChargeType: 'PERCENTAGE'})}
-                        className={`px-4 py-1.5 text-[10px] font-bold rounded-lg transition-all ${formData.makingChargeType === 'PERCENTAGE' ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
-                      >Percent (%)</button>
+                        className={`px-4 py-2 text-[10px] font-bold rounded-lg transition-all flex items-center gap-2 ${formData.makingChargeType === 'PERCENTAGE' ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
+                      >
+                        <Percent className="w-3 h-3" /> Percent
+                      </button>
                     </div>
                   </div>
                   <div className="relative">
                     <input 
                       type="number" 
-                      placeholder={formData.makingChargeType === 'FIXED' ? "Enter Fixed Amount in ₹" : "Enter Percentage (%)"}
+                      placeholder={formData.makingChargeType === 'FIXED' ? "e.g. 1500" : "e.g. 12.5"}
                       className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-5 text-white font-bold text-xl"
                       value={formData.makingCharges || ''}
                       onChange={e => setFormData({...formData, makingCharges: parseFloat(e.target.value)})}
